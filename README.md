@@ -76,6 +76,23 @@ http://127.0.0.1:5000
 ```
 
 ---
+## 📸 Project Screenshots
+
+### Dashboard
+
+![Dashboard](screenshots/dashboard.png)
+
+### Students Page
+
+![Students](screenshots/students.png)
+
+### Add Student Page
+
+![Add Student](screenshots/add-student.png)
+
+### Edit Student Page
+
+![Edit Student](screenshots/edit-student.png)
 
 ## 👨‍💻 Author
 
