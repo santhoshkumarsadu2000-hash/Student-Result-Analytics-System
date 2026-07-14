@@ -7,6 +7,7 @@ def get_connection():
         user="avnadmin",
         password="AVNS_1h9ZJi7XgqcijG_64Qu",
         database="defaultdb",
-        ssl={'ca': 'C:\Users\dhill\Downloads\santhoshkumarsadhu\Student-Result-Analytics-System\ca.pem'}
+        ssl={'ca': r'C:\Users\dhill\Downloads\santhoshkumarsadhu\Student-Result-Analytics-System\ca.pem'}
+
     )
     return connection
