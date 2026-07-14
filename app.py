@@ -1,8 +1,53 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for 
 from db import get_connection
 
 app = Flask(__name__)
 
+def init_db():
+    """Automatically builds missing tables before the application starts up."""
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            # 1. Create students table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS students (
+                    student_id INT AUTO_INCREMENT PRIMARY KEY,
+                    roll_number VARCHAR(50) NOT NULL UNIQUE,
+                    full_name VARCHAR(150) NOT NULL,
+                    gender VARCHAR(20),
+                    department VARCHAR(100),
+                    year_of_study INT,
+                    email VARCHAR(150),
+                    phone VARCHAR(20)
+                )
+            """)
+            # 2. Create subjects table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS subjects (
+                    subject_id INT AUTO_INCREMENT PRIMARY KEY,
+                    subject_name VARCHAR(100) NOT NULL UNIQUE
+                )
+            """)
+            # 3. Create marks table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS marks (
+                    mark_id INT AUTO_INCREMENT PRIMARY KEY,
+                    student_id INT,
+                    subject_id INT,
+                    marks INT,
+                    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE
+                )
+            """)
+            connection.commit()
+            print("Database tables initialized successfully.")
+    except Exception as e:
+        print(f"Database initialization error: {e}")
+    finally:
+        connection.close()
+
+# Trigger table check/creation
+init_db()
 
 @app.route("/")
 def home():
@@ -10,16 +55,17 @@ def home():
     cursor = connection.cursor()
 
     # Total Students
-    cursor.execute("SELECT COUNT(*) FROM students")
-    total_students = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) as total FROM students")
+    total_students = cursor.fetchone()['total']
 
     # Total Subjects
-    cursor.execute("SELECT COUNT(*) FROM subjects")
-    total_subjects = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) as total FROM subjects")
+    total_subjects = cursor.fetchone()['total']
 
     # Average Marks
-    cursor.execute("SELECT AVG(marks) FROM marks")
-    average_marks = cursor.fetchone()[0]
+    cursor.execute("SELECT AVG(marks) as avg_marks FROM marks")
+    avg_res = cursor.fetchone()['avg_marks']
+    average_marks = round(float(avg_res), 2) if avg_res is not None else 0.0
 
     cursor.close()
     connection.close()
@@ -28,7 +74,7 @@ def home():
         "home.html",
         total_students=total_students,
         total_subjects=total_subjects,
-        average_marks=round(average_marks, 2)
+        average_marks=average_marks
     )
 
 @app.route("/students")
@@ -49,13 +95,12 @@ def students():
     else:
         cursor.execute("SELECT * FROM students")
 
-    students = cursor.fetchall()
+    students_list = cursor.fetchall()
 
     cursor.close()
     connection.close()
 
-    return render_template("students.html", students=students)
-
+    return render_template("students.html", students=students_list)
 
 @app.route("/add")
 def add_student():
@@ -96,30 +141,15 @@ def save_student():
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
 
-        values = (
-            roll_number,
-            name,
-            gender,
-            department,
-            year,
-            email,
-            phone
-        )
-
-        print(values)
-
+        values = (roll_number, name, gender, department, year, email, phone)
         cursor.execute(query, values)
         connection.commit()
-
-        print("Inserted Successfully")
 
         cursor.close()
         connection.close()
 
         return redirect("/students")
-
     except Exception as e:
-        print(e)
         return str(e)
 
 @app.route("/update", methods=["POST"])
@@ -149,16 +179,7 @@ def update_student():
     WHERE student_id = %s
     """
 
-    values = (
-        roll_number,
-        name,
-        gender,
-        department,
-        year,
-        email,
-        phone,
-        student_id
-    )
+    values = (roll_number, name, gender, department, year, email, phone, student_id)
 
     cursor.execute(query, values)
     connection.commit()
@@ -180,4 +201,6 @@ def delete_student(student_id):
     return redirect("/students")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Uses port environment variable assigned by Render
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=True)
